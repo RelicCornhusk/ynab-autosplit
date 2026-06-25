@@ -1,0 +1,9 @@
+[project]
+name = "ynab-autosplit"
+version = "0.1.0"
+description = "Python script for automatically splitting transactions from a shared account."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "ynab>=4.1.0",
+]
