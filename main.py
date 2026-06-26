@@ -1,6 +1,5 @@
 from datetime import timedelta
 from datetime import date
-from typing import Optional
 from typing import List
 import os
 import ynab
