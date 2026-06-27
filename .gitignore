@@ -11,6 +11,9 @@ __pycache__/
 *$py.class
 *.egg-info
 
+# Node.js files
+node_modules
+
 # IDEs and Editors
 .vscode/
 .idea/
