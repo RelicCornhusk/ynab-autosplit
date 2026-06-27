@@ -101,6 +101,7 @@ class YNABClient:
             var_date=max_date,
             amount=total_amount,
             payee_name="Shared Costs",
+            approved=True,
             subtransactions=subtransactions,
         )
 
