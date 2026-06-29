@@ -293,7 +293,7 @@ wheels = [
 ]
 
 [[package]]
-name = "ynab-autosplit"
+name = "partner-split-for-ynab"
 source = { virtual = "." }
 dependencies = [
     { name = "ynab" },

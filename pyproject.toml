@@ -1,7 +1,7 @@
 [project]
-name = "ynab-autosplit"
+name = "partner-split-for-ynab"
 dynamic = ["version"]
-description = "Python script for automatically splitting transactions from a shared account."
+description = "A background worker that automatically syncs shared credit card expenses to an IOU account in YNAB."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
