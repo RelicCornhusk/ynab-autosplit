@@ -1,7 +1,9 @@
 <div align="center">
   <h1>Partner Split for YNAB</h1> 
   <h3>A background worker that automatically syncs shared credit card expenses to an IOU account in YNAB.</h3>
-  <img width="147" height="58.5" alt="image" src="https://api.ynab.com/papi/works_with_ynab.svg" />
+  <a href="https://api.ynab.com/#works-with-ynab" target="_blank" rel="noopener noreferrer">
+    <img width="147" height="58.5" alt="Works with YNAB" src="https://api.ynab.com/papi/works_with_ynab.svg" />
+  </a>
 </div>
 <br />
 
