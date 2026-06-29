@@ -1,27 +1,27 @@
-# ynab-autosplit
+# partner-split-for-ynab
 
-> Automatically split YNAB transactions from a shared credit card so your budget is always up to date — no clicking required.
+> A background worker that automatically syncs shared credit card expenses to an IOU account in YNAB.
 
-**New to cost sharing in YNAB?** [cost-sharing-for-ynab](costsharingforynab.com) is an excellent introduction to the overall concept and how to set up your YNAB accounts correctly before using this tool. It's worth checking out even if you ultimately plan to use `ynab-autosplit`.
+**New to cost sharing in YNAB?** Chelsea Schmidt's [cost-sharing-for-ynab](costsharingforynab.com) is an excellent introduction to the overall concept and how to set up your YNAB accounts correctly before using this tool. I recommend using it a few times (in Standard mode) before using this automation.
 
 ## What it does
 
 If you share a credit card with a partner or family member, keeping your YNAB budget accurate is a pain. Every time a transaction comes in on the shared card, you have to manually figure out your portion and record an IOU somewhere.
 
-`ynab-autosplit` solves this by running as a background job. It watches your shared credit card account in YNAB, finds any new approved and categorized transactions, and automatically creates a corresponding split transaction in a separate IOU account — at whatever percentage of the cost is yours. Processed transactions are flagged green so they're never double-counted.
+`partner-split-for-ynab` solves this by running as a background job. It watches your shared credit card account in YNAB, finds any new approved and categorized transactions, and automatically creates a corresponding split transaction in a separate IOU account — at whatever percentage of the cost is yours. Processed transactions are flagged green so they're never double-counted.
 
 ## Inspiration
 
-This project was inspired by [cost-sharing-for-ynab](https://github.com/chelseaSchmidt/cost-sharing-for-ynab) by Chelsea Schmidt, which does the same thing through a web UI where you select transactions and trigger the split. `ynab-autosplit` is an alternative for people who'd rather have it happen automatically on a schedule, without any manual steps.
+This project was inspired by [cost-sharing-for-ynab](https://github.com/chelseaSchmidt/cost-sharing-for-ynab) by Chelsea Schmidt, which works through a web UI where you select transactions within a time range and trigger a split transaction from the IOU account. `partner-split-for-ynab` is an alternative for people who'd rather have this happen automatically on a schedule, without any manual intervention.
 
 This project uses the standard model from Cost Sharing for YNAB, where all shared expenses flow through a shared account and your portion is mirrored into a separate IOU tracking account. This is distinct from the category-based approach where you have shared expenses parent category.
 
 ## How it works
 
-1. Fetches recent transactions from your shared account (controlled by `YNAB_LOOKBACK_DAYS`)
-2. Filters to transactions that are approved, categorized, and not yet flagged green
-3. Creates a single split transaction in your IOU account — one subtransaction per original transaction, preserving the category and payee, scaled to your configured percentage
-4. Flags all processed transactions green so they won't be picked up again
+1. Fetches recent transactions from your shared account in the last 30 days (the number of days can be tweaked)
+2. Filters transactions that are approved, categorized, and not yet flagged green
+3. Creates a single split transaction in your IOU account — one subtransaction per original transaction, preserving the category and payee, scaled to your partner's share of the expense. This transaction will be marked as approved and uncleared.
+4. Flags all processed transactions from the shared account green so they won't be picked up again on the next run
 
 ## Configuration
 
@@ -34,24 +34,8 @@ All configuration is done via environment variables.
 | `YNAB_SHARED_ACCOUNT_NAME` | ✅ | — | The exact name of the shared credit card account in YNAB to watch for new transactions. |
 | `YNAB_IOU_ACCOUNT_NAME` | ✅ | — | The exact name of the account where your share of the costs will be recorded as a split transaction. |
 | `YNAB_IOU_PERCENTAGE` | ✅ | — | Your share of shared expenses as an integer (e.g. `50` for half). |
-| `YNAB_LOOKBACK_DAYS` | ❌ | `30` | How many days back to look for unprocessed transactions. |
+| `YNAB_LOOKBACK_DAYS` | ❌ | `30` | How many days back to look back for unprocessed transactions. |
 
-## Running locally
-
-Requires Python 3.14+ and [uv](https://github.com/astral-sh/uv).
-
-```bash
-git clone https://github.com/RelicCornhusk/ynab-autosplit.git
-cd ynab-autosplit
-
-export YNAB_ACCESS_TOKEN=your_token_here
-export YNAB_PLAN_NAME="My Budget"
-export YNAB_SHARED_ACCOUNT_NAME="Shared Visa"
-export YNAB_IOU_ACCOUNT_NAME="Partner IOU"
-export YNAB_IOU_PERCENTAGE=50
-
-uv run main.py
-```
 
 ## Docker
 
@@ -64,7 +48,7 @@ docker run --rm \
   -e YNAB_SHARED_ACCOUNT_NAME="Shared Visa" \
   -e YNAB_IOU_ACCOUNT_NAME="Partner IOU" \
   -e YNAB_IOU_PERCENTAGE=50 \
-  ghcr.io/reliccornhusk/ynab-autosplit:latest
+  ghcr.io/reliccornhusk/partner-split-for-ynab:latest
 ```
 
 ## Deployment
@@ -75,20 +59,20 @@ A simple self-hosted setup using [mcuadros/ofelia](https://github.com/mcuadros/o
 
 ```yaml
 services:
-  ynab-autosplit:
-    image: ghcr.io/reliccornhusk/ynab-autosplit:latest
+  partner-split-for-ynab:
+    image: ghcr.io/reliccornhusk/partner-split-for-ynab:latest
     env_file: .env
 
   scheduler:
     image: mcuadros/ofelia:latest
     depends_on:
-      - ynab-autosplit
+      - partner-split-for-ynab
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     command: daemon --docker
     labels:
-      ofelia.job-run.ynab-autosplit.schedule: "@every 5m"
-      ofelia.job-run.ynab-autosplit.container: "ynab-autosplit"
+      ofelia.job-run.partner-split-for-ynab.schedule: "@every 5m"
+      ofelia.job-run.partner-split-for-ynab.container: "partner-split-for-ynab"
 ```
 
 Create a `.env` file alongside your `docker-compose.yml` (and add it to `.gitignore`):
@@ -110,7 +94,7 @@ All environment variables are pulled from a single Kubernetes Secret, so nothing
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: ynab-autosplit
+  name: partner-split-for-ynab
   namespace: finance
 spec:
   schedule: "*/5 * * * *"
@@ -121,17 +105,17 @@ spec:
         spec:
           restartPolicy: OnFailure
           containers:
-            - name: ynab-autosplit
-              image: ghcr.io/reliccornhusk/ynab-autosplit:latest
+            - name: partner-split-for-ynab
+              image: ghcr.io/reliccornhusk/partner-split-for-ynab:latest
               envFrom:
                 - secretRef:
-                    name: ynab-autosplit-config
+                    name: partner-split-for-ynab-config
 ```
 
 Create the secret with all your config in one shot:
 
 ```bash
-kubectl create secret generic ynab-autosplit-config \
+kubectl create secret generic partner-split-for-ynab-config \
   --from-literal=YNAB_ACCESS_TOKEN=your_token_here \
   --from-literal=YNAB_PLAN_NAME="My Plan" \
   --from-literal=YNAB_SHARED_ACCOUNT_NAME="Shared Visa" \
@@ -144,6 +128,24 @@ kubectl create secret generic ynab-autosplit-config \
 ### Serverless options
 
 If you'd rather run this on the cloud, this script is a good fit for a scheduled cloud function — AWS Lambda with EventBridge Scheduler, Google Cloud Functions with Cloud Scheduler, or Azure Functions with a timer trigger all work well. Package the code as a container or zip, point the trigger at your desired interval, and inject the environment variables through your cloud provider's secrets manager. The script has no persistent state and exits cleanly after each run, which maps naturally to the function execution model.
+
+## Running locally
+
+The following snippet can be used for local testing.
+Requires Python 3.14+ and [uv](https://github.com/astral-sh/uv).
+
+```bash
+git clone https://github.com/RelicCornhusk/partner-split-for-ynab.git
+cd partner-split-for-ynab
+
+export YNAB_ACCESS_TOKEN=your_token_here
+export YNAB_PLAN_NAME="My Budget"
+export YNAB_SHARED_ACCOUNT_NAME="Shared Visa"
+export YNAB_IOU_ACCOUNT_NAME="Partner IOU"
+export YNAB_IOU_PERCENTAGE=50
+
+uv run main.py
+```
 
 ## A note on rate limits
 
