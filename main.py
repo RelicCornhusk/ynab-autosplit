@@ -200,51 +200,61 @@ class YNABClient:
         return response
 
 
-if __name__ == "__main__":
+def main():
     plan_name = os.getenv("YNAB_PLAN_NAME")
     shared_account_name = os.getenv("YNAB_SHARED_ACCOUNT_NAME")
     iou_account_name = os.getenv("YNAB_IOU_ACCOUNT_NAME")
     iou_percentage = int(os.getenv("YNAB_IOU_PERCENTAGE"))
 
-    with YNABClient() as client:
-        try:
-            plan_id = client.get_plan_id_from_name(plan_name)
-            shared_account_id = client.get_account_id_from_name(
-                plan_id, shared_account_name
-            )
-            iou_account_id = client.get_account_id_from_name(plan_id, iou_account_name)
-        except Exception as e:
-            logger.error("Startup/setup failed: %s", e)
-            sys.exit(0)
-        lookback_days = int(os.getenv("YNAB_LOOKBACK_DAYS", "30"))
-        since_date = date.today() - timedelta(days=lookback_days)
+    try:
+        with YNABClient() as client:
+            try:
+                plan_id = client.get_plan_id_from_name(plan_name)
+                shared_account_id = client.get_account_id_from_name(
+                    plan_id, shared_account_name
+                )
+                iou_account_id = client.get_account_id_from_name(
+                    plan_id, iou_account_name
+                )
+            except Exception as e:
+                logger.error("Startup/setup failed: %s", e)
+                sys.exit(0)
+            lookback_days = int(os.getenv("YNAB_LOOKBACK_DAYS", "30"))
+            since_date = date.today() - timedelta(days=lookback_days)
 
-        new_transactions = client.fetch_new_transactions(
-            plan_id, shared_account_id, since_date
-        )
-        for t in new_transactions:
-            logger.debug(
-                "%s  %.2f  %s  [%s]",
-                t.var_date,
-                t.amount / 1000.0,
-                t.payee_name,
-                t.flag_color,
+            new_transactions = client.fetch_new_transactions(
+                plan_id, shared_account_id, since_date
             )
+            for t in new_transactions:
+                logger.debug(
+                    "%s  %.2f  %s  [%s]",
+                    t.var_date,
+                    t.amount / 1000.0,
+                    t.payee_name,
+                    t.flag_color,
+                )
 
-        # Filter for transactions that are approved, categorized, and not already processed (flagged).
-        transactions_to_process = [
-            t
-            for t in new_transactions
-            if t.approved
-            and t.category_id is not None
-            and t.flag_color is None
-            and t.transfer_account_id is None
-        ]
+            # Filter for transactions that are approved, categorized, and not already processed (flagged).
+            transactions_to_process = [
+                t
+                for t in new_transactions
+                if t.approved
+                and t.category_id is not None
+                and t.flag_color is None
+                and t.transfer_account_id is None
+            ]
 
-        if transactions_to_process:
-            client.create_iou_transaction(
-                plan_id, iou_account_id, iou_percentage, transactions_to_process
-            )
-            client.update_transactions_flag(plan_id, transactions_to_process)
-        else:
-            logger.info("No valid, unprocessed transactions found.")
+            if transactions_to_process:
+                client.create_iou_transaction(
+                    plan_id, iou_account_id, iou_percentage, transactions_to_process
+                )
+                client.update_transactions_flag(plan_id, transactions_to_process)
+            else:
+                logger.info("No valid, unprocessed transactions found.")
+    except Exception as e:
+        logger.error("Startup/setup failed: %s", e)
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

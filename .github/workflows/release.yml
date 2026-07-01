@@ -1,4 +1,4 @@
-name: CI, Release, and Publish
+name: Release, and Publish
 
 on:
   push:
